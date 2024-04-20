@@ -1,0 +1,292 @@
+<html>
+    <head>
+        <title>Менеджер задач</title>
+        <style>
+            textarea, select {
+                width: 100%;
+                padding: 12px 20px;
+                margin: 8px 0;
+                display: inline-block;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+
+            select {
+                background-color: white;
+            }
+
+            input[type=submit], input[type=date] {
+                width: 100%;
+                background-color: #4CAF50;
+                color: white;
+                padding: 14px 20px;
+                margin: 8px 0;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+            }
+
+            input[type=date] {
+                width: 10%;
+            }
+
+            input[type=submit]:hover {
+                background-color: #45a049;
+            }
+
+            .create-form {
+                width: 50%;
+                margin: 50px auto 0;
+                border-radius: 5px;
+                background-color: #f2f2f2;
+                padding: 20px;
+            }
+
+            .filter-select {
+                width: 20%;
+                margin: 30px 30px 30px 10px;
+            }
+
+            #tasks {
+                font-family: Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                margin: 0 auto;
+                width: 50%;
+            }
+
+            #tasks td, #customers th {
+                border: 1px solid #ddd;
+                padding: 8px;
+            }
+
+            #tasks tr:nth-child(even){background-color: #f2f2f2;}
+
+            #tasks tr:hover {background-color: #ddd;}
+
+            #tasks th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                background-color: #04AA6D;
+                color: white;
+            }
+
+            .button {
+                border: none;
+                color: white;
+                cursor: pointer;
+                padding: 15px 32px;
+                text-align: center;
+                border-radius: 10px;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+            }
+
+            .button-danger {
+                background-color: red;
+            }
+
+            .button-warning {
+                background-color: #008CBA;
+            }
+
+            .error-block {
+                display: flex;
+                width: 25%;
+                border-radius: 10px;
+                height: 15%;
+                font-size: 20px;
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 0 auto;
+                justify-content: center;
+                align-items: center;
+                background-color: red;
+                padding: 10px;
+                color: white;
+            }
+
+            .error-cross {
+                color: black;
+                display: block;
+                width: 10%;
+                height: 10%;
+                top: -30px;
+                right: -15px;
+                position: relative;
+            }
+
+            .error-cross:hover {
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <?php
+            if($error != null)
+            {
+                $cross = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>';
+                echo '<div id="error-block" class="error-block">';
+                echo '<span>' . $error . '</span>';
+                echo '<div class="error-cross" onclick="closeMessage()">' . $cross . '</div></div>';
+            }
+        ?>
+        <h1 style="text-align: center">Менеджер задач</h1>
+
+        <div class="create-form">
+            <form action="http://localhost:8000/tasks" method="POST">
+                <label for="description">Описание</label>
+                <textarea id="description" required name="task_description" placeholder="Описание вашей задачи"></textarea>
+
+                <label for="status">Статус</label>
+                <select id="status" name="status_id">
+                    <?php
+                        foreach($statuses as $status)
+                        {
+                            echo "<option value=" . $status->status_id . ">" . $status->status_name . "</option>";
+                        }
+                    ?>
+                </select>
+
+                <label for="priority">Приоритет</label>
+                <select id="priority" name="priority_id">
+                    <?php
+                        foreach($priorities as $priority)
+                        {
+                            echo "<option value=" . $priority->priority_id . ">" . $priority->priority_name . "</option>";
+                    }
+                    ?>
+                </select>
+
+                <input type="submit" value="Создать">
+            </form>
+        </div>
+
+        <div style="margin-left: 300px">
+            <select id="status-select" class="filter-select" onchange="redirect()">
+                <?php
+                    echo "<option value=0";
+                    if ($status_id == 0)
+                    {
+                        echo " selected";
+                    }
+                    echo ">все</option>";
+                    foreach($statuses as $status)
+                    {
+                        echo "<option value=" . $status->status_id;
+                        if ($status->status_id == $status_id)
+                        {
+                            echo " selected ";
+                        }
+                        echo ">" . $status->status_name . "</option>";
+                    }
+                ?>
+            </select>
+
+            <select id="priority-select" class="filter-select" onchange="redirect()">
+                <?php
+                    echo "<option value=0";
+                    if ($priority_id == 0)
+                    {
+                        echo " selected";
+                    }
+                    echo ">все</option>";
+                    foreach($priorities as $priority)
+                    {
+                        echo "<option value=" . $priority->priority_id;
+                        if ($priority->priority_id == $priority_id)
+                        {
+                            echo " selected ";
+                        }
+                        echo ">" . $priority->priority_name . "</option>";
+                    }
+                ?>
+            </select>
+
+            <label for="fromDatePicker">Дата С</label> <input id="fromDatePicker" type="date" onchange="redirect()" value=<?php echo $created_from; ?>>
+            <label for="toDatePicker" style="margin-left: 30px">Дата По</label> <input id="toDatePicker" type="date" onchange="redirect()" value=<?php echo $created_to; ?>>
+        </div>
+
+        <?php
+            if (count($tasks) == 0)
+            {
+                echo "<h2 style='text-align: center'>Задач не найдено</h2>";
+            }
+            else
+            {
+                echo "<table id='tasks'><tr><th>#</th><th>Описание</th><th>Статус</th>
+                        <th>Приоритет</th><th>Дата создания</th><th>Дата обновления</th>
+                        <th>Действия</th>
+                </tr>";
+                foreach($tasks as $task)
+                {
+                    echo "<tr>";
+                    echo "<td>" . $task->task_id . "</td>";
+                    echo "<td>" . $task->task_description . "</td>";
+                    echo "<td>" . App\Model\Status::name($task->status_id) . "</td>";
+                    echo "<td>" . App\Model\Priority::name($task->priority_id) . "</td>";
+                    echo "<td>" . date("Y-m-d", strtotime($task->created_at)) . "</td>";
+                    echo "<td>" . date("Y-m-d", strtotime($task->updated_at)) . "</td>";
+                    echo "<td>";
+                    echo "<form method='post' action='http://localhost:8000/edit-task'>";
+                    echo "<input type='hidden' name='task_id' value='" . $task->task_id . "'>";
+                    echo "<button class='button button-warning'>Редактировать</button>";
+                    echo "</form>";
+                    echo "<form method='post' action='http://localhost:8000/delete-task'>";
+                    echo "<input type='hidden' name='task_id' value='" . $task->task_id . "'>";
+                    echo "<button class='button button-danger'>Удалить</button>";
+                    echo "</form>";
+                    echo "</td>";
+                    echo "</tr>";
+                }
+                echo "</table>";
+            }
+        ?>
+    </body>
+    <script>
+        function redirect() {
+            let url = "http://localhost:8000";
+            let status_id = document.getElementById('status-select').value;
+            let priority_id = document.getElementById('priority-select').value;
+            let created_from = document.getElementById('fromDatePicker').value;
+            let created_to = document.getElementById('toDatePicker').value;
+            if (status_id != 0) {
+                url += `?status_id=${status_id}`;
+            }
+            if (priority_id != 0) {
+                let subCondition = `priority_id=${priority_id}`;
+                if (url.indexOf("?") > 0) {
+                    subCondition = "&" + subCondition;
+                } else {
+                    subCondition = "?" + subCondition;
+                }
+                url += subCondition;
+            }
+            if (created_from) {
+                let subCondition = `created_from=${created_from}`;
+                if (url.indexOf("?") > 0) {
+                    subCondition = "&" + subCondition;
+                } else {
+                    subCondition = "?" + subCondition;
+                }
+                url += subCondition;
+            }
+            if (created_to) {
+                let subCondition = `created_to=${created_to}`;
+                if (url.indexOf("?") > 0) {
+                    subCondition = "&" + subCondition;
+                } else {
+                    subCondition = "?" + subCondition;
+                }
+                url += subCondition;
+            }
+
+            window.location.href = url;
+        }
+
+        function closeMessage() {
+            document.getElementById('error-block').style.display = 'none';
+        }
+    </script>
+</html>
